@@ -130,7 +130,7 @@ public class Life {
 		}
 
 		for (int i = 1; i < N; i++) {
-			Thread.sleep(350);
+			Thread.sleep(325);
 			output = actions.output(X, Y, output);
 			System.out.printf("Mutation number %d:%n", (i+1));
 			actions.speakOutput(output);
