@@ -95,9 +95,9 @@ class Actions {
 public class Life {
 
 	public static void main(String[] args) throws InterruptedException {
-		String path = "input.txt";
+		final String PATH = "input.txt";
 
-		Storage storage = new Storage(path);
+		Storage storage = new Storage(PATH);
 		int N;
 		int X;
 		int Y;
