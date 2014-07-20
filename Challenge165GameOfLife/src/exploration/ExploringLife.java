@@ -1,11 +1,14 @@
 package exploration;
+
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Queue;
 import java.util.Scanner;
+import java.util.concurrent.ArrayBlockingQueue;
 
 class Storage {
 	private String path;
@@ -13,11 +16,21 @@ class Storage {
 	Storage(String path) {
 		this.path = path;
 	}
+	
+
+
+	private int[] importedBoardSize = new int[2];
+	
+	public int[] getBoardSize() {
+		return importedBoardSize;
+	}
+
+	
 
 	char[][] input() {
 		List<String> list = new ArrayList<>();
 		try (BufferedReader br = new BufferedReader(new FileReader(path))) {
-			String currentLine; 
+			String currentLine;
 			while ((currentLine = br.readLine()) != null) {
 				list.add(currentLine);
 			}
@@ -26,80 +39,67 @@ class Storage {
 		} catch (IOException e) {
 			System.out.println("Cannot read " + path);
 		}
-		
+
 		int rows = list.size();
 		int cols = list.get(0).length();
-		
+
 		char[][] input = new char[rows][cols];
-		
+
 		for (int i = 0; i < rows; i++) {
 			if (list.get(i).length() != cols) {
 				System.err.println("Mismatched columns in input!");
-				return new char[0][0];
+				return null;
 			}
 			input[i] = list.get(i).toCharArray();
 		}
 		return input;
 	}
-	
+
 	char[][] generatedInput(int[] boardSize) {
 		int rows = boardSize[0];
 		int cols = boardSize[1];
 		int life = boardSize[2];
-		
+
 		char[][] input = new char[rows][cols];
-		
+
 		for (int i = 0; i < rows; i++) {
 			for (int j = 0; j < cols; j++) {
-				input[i][j] = (Math.random()*100 > life) ? '.' : '#'; 
+				input[i][j] = (Math.random() * 100 > life) ? '.' : '#';
 			}
 		}
-		
+
 		return input;
 	}
-	
-	
-	
+
 }
 
 class Actions {
 
-	char[][] output(int X, int Y, char[][] in) {
+	char[][] output(char[][] input) {
+		int rows = input.length;
+		int cols = input[0].length;
 
-		char[][] output = new char[X][Y];
+		char[][] output = new char[rows][cols];
 
 		char oct = '#';
 
-		for (int i = 0; i < X; i++) {
-			for (int j = 0; j < Y; j++) {
+		for (int i = 0; i < rows; i++) {
+			for (int j = 0; j < cols; j++) {
 				int count = 0;
-				if (in[(i - 1 + X) % X][(j - 1 + Y) % Y] == oct) {
-					count++;
-				}
-				if (in[(i - 1 + X) % X][j] == oct) {
-					count++;
-				}
-				if (in[(i - 1 + X) % X][(j + 1 + Y) % Y] == oct) {
-					count++;
-				}
-				if (in[i][(j - 1 + Y) % Y] == oct) {
-					count++;
-				}
-				if (in[i][(j + 1 + Y) % Y] == oct) {
-					count++;
-				}
-				if (in[(i + 1 + X) % X][(j - 1 + Y) % Y] == oct) {
-					count++;
-				}
-				if (in[(i + 1 + X) % X][j] == oct) {
-					count++;
-				}
-				if (in[(i + 1 + X) % X][(j + 1 + Y) % Y] == oct) {
-					count++;
-				}
 
+				for (int k = -1; k <= 1; k++) {
+					for (int m = -1; m <= 1; m++) {
+						if (input[(i+k+rows)%rows][(j+m+cols)%cols] == oct) {
+							count++;
+						}
+					}
+				}
+				if (input[i][j] == oct) {
+					count--; // fixes when current gets counted above;
+				}
+				
 				if (count == 2) {
-					output[i][j] = in[i][j];
+					output[i][j] = input[i][j];
 				} else if (count == 3) {
 					output[i][j] = '#';
 				} else {
@@ -111,7 +111,7 @@ class Actions {
 		return output;
 	}
 
-	void speakOutput(char[][] output) throws InterruptedException {
+	void speakOutput(char[][] output) {
 		for (char[] line : output) {
 			for (char current : line) {
 				System.out.print(current);
@@ -128,7 +128,7 @@ public class ExploringLife {
 		final String PATH = "exploreInput.txt";
 
 		Storage storage = new Storage(PATH);
-		
+
 		System.out.println("Choose which game to play:");
 		System.out.println("Enter (0) for user input.");
 		System.out.println("Enter (1) for a random map.");
@@ -147,57 +147,48 @@ public class ExploringLife {
 				boardSize[0] = scanner.nextInt();
 				System.out.println("Enter a number of columns for the board:");
 				boardSize[1] = scanner.nextInt();
-				System.out.println("Enter an integer percentage for a tile to contain life:");
+				System.out
+						.println("Enter an integer percentage for a tile to contain life:");
 				boardSize[2] = scanner.nextInt();
 			}
-			
+
 		} catch (NumberFormatException e) {
 			System.out.println("Input must be a number!");
 			scanner.close();
 			return;
 		}
 		scanner.close();
-		
+
 		char[][] input;
 		if (gameMode == 0) {
 			input = storage.input();
+			if (input == null) {
+				return;
+			}
 		} else {
 			input = storage.generatedInput(boardSize);
 		}
-		
-		System.out.println("\nInitial conditions:");
-		for (char[] row : input) {
-			for (char current : row) {
-				System.out.print(current);
-			}
-			System.out.println();
-		}
-		int N = 100;
 		Actions actions = new Actions();
-		
-		int X = input.length;
-		int Y = input[0].length;
-		
-		char[][] output = new char[X][Y];
-		if (N > 0) {
-			System.out.println("Mutation number 1:");
-			output = actions.output(X, Y, input);
-			actions.speakOutput(output);
+		System.out.println("Mutation number 1:");
+		char[][] output = actions.output(input);
+		actions.speakOutput(output);
 
-		}
-
-		for (int i = 1; i < N; i++) {
+		Queue<char[][]> pastOutputs = new ArrayBlockingQueue<>(3);
+		pastOutputs.add(input);
+		System.out.println(pastOutputs.size());
+		
+		for (int i = 2; i < 1001; i++) {
 			Thread.sleep(325);
-			output = actions.output(X, Y, output);
-			System.out.printf("Mutation number %d:%n", (i+1));
+			System.out.printf("Mutation number %d:%n", i);
+			output = actions.output(output);
 			actions.speakOutput(output);
+			
+			
+			
 		}
-		
+
 	}
 }
-
 // to do:
 // check previous boards - previous 2 seems like a good number
 // use queue for that?
-//
-// near infinite loop - what value for a kill switch?
