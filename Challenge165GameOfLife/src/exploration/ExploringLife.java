@@ -185,7 +185,7 @@ public class ExploringLife {
 
 			if (pastOutputs.contains(input)) {
 				System.out.printf(
-						"Repeating board found within the last %d maps.",
+						"Repeating board found within the last %d maps.%n",
 						pastOutputs.size());
 				break;
 			}
