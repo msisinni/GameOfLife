@@ -6,6 +6,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.InputMismatchException;
 import java.util.List;
 import java.util.Queue;
 import java.util.Scanner;
@@ -84,8 +85,8 @@ class Actions {
 
 				for (int k = -1; k <= 1; k++) {
 					for (int m = -1; m <= 1; m++) {
-						if (input.charAt(((i + k) * cols + ((j + m) + rows)
-								% rows + totalChars)
+						if (input.charAt(((i + k) * cols + ((j + m) + cols)
+								% cols + totalChars)
 								% totalChars) == '#') {
 							count++;
 						}
@@ -145,7 +146,7 @@ public class ExploringLife {
 						.println("Enter an integer percentage for a tile to contain life:");
 				life = scanner.nextInt();
 			}
-		} catch (NumberFormatException e) {
+		} catch (InputMismatchException e) {
 			System.out.println("Input must be a number!");
 			scanner.close();
 			return;
@@ -167,7 +168,10 @@ public class ExploringLife {
 		}
 		String originalInput = new String(input);
 		Actions actions = new Actions();
-
+		
+		System.out.println("Initial input: ");
+		actions.speakOutput(originalInput, boardSize);
+		
 		int pastOutputsLimit = 5;
 
 		Queue<String> pastOutputs = new ArrayDeque<>(pastOutputsLimit);
