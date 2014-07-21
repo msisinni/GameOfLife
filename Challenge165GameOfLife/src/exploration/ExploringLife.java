@@ -4,30 +4,26 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
 import java.util.Scanner;
-import java.util.concurrent.ArrayBlockingQueue;
 
 class Storage {
 	private String path;
 
-	Storage(String path) {
+	public void setPath(String path) {
 		this.path = path;
 	}
-	
-
 
 	private int[] importedBoardSize = new int[2];
-	
+
 	public int[] getBoardSize() {
 		return importedBoardSize;
 	}
 
-	
-
-	char[][] input() {
+	String input() {
 		List<String> list = new ArrayList<>();
 		try (BufferedReader br = new BufferedReader(new FileReader(path))) {
 			String currentLine;
@@ -43,45 +39,44 @@ class Storage {
 		int rows = list.size();
 		int cols = list.get(0).length();
 
-		char[][] input = new char[rows][cols];
+		importedBoardSize[0] = rows;
+		importedBoardSize[1] = cols;
+
+		StringBuilder sb = new StringBuilder(rows * cols);
 
 		for (int i = 0; i < rows; i++) {
 			if (list.get(i).length() != cols) {
 				System.err.println("Mismatched columns in input!");
 				return null;
 			}
-			input[i] = list.get(i).toCharArray();
+			sb.append(list.get(i));
 		}
-		return input;
+		return sb.toString();
 	}
 
-	char[][] generatedInput(int[] boardSize) {
+	String generatedInput(int[] boardSize, int life) {
 		int rows = boardSize[0];
 		int cols = boardSize[1];
-		int life = boardSize[2];
+		StringBuilder sb = new StringBuilder(rows * cols);
 
-		char[][] input = new char[rows][cols];
-
-		for (int i = 0; i < rows; i++) {
-			for (int j = 0; j < cols; j++) {
-				input[i][j] = (Math.random() * 100 > life) ? '.' : '#';
-			}
+		for (int i = 0; i < rows * cols; i++) {
+			sb.append((Math.random() * 100 > life) ? '.' : '#');
 		}
 
-		return input;
+		return sb.toString();
 	}
 
 }
 
 class Actions {
 
-	char[][] output(char[][] input) {
-		int rows = input.length;
-		int cols = input[0].length;
+	String output(String input, int[] boardSize) {
+		int rows = boardSize[0];
+		int cols = boardSize[1];
 
-		char[][] output = new char[rows][cols];
+		int totalChars = rows * cols;
 
-		char oct = '#';
+		StringBuilder sb = new StringBuilder(totalChars);
 
 		for (int i = 0; i < rows; i++) {
 			for (int j = 0; j < cols; j++) {
@@ -89,51 +84,50 @@ class Actions {
 
 				for (int k = -1; k <= 1; k++) {
 					for (int m = -1; m <= 1; m++) {
-						if (input[(i+k+rows)%rows][(j+m+cols)%cols] == oct) {
+						if (input.charAt(((i + k) * cols + ((j + m) + rows)
+								% rows + totalChars)
+								% totalChars) == '#') {
 							count++;
 						}
 					}
 				}
-				if (input[i][j] == oct) {
+				if (input.charAt(i * cols + j) == '#') {
 					count--; // fixes when current gets counted above;
 				}
-				
+
 				if (count == 2) {
-					output[i][j] = input[i][j];
+					sb.append(input.charAt(i * cols + j));
 				} else if (count == 3) {
-					output[i][j] = '#';
+					sb.append('#');
 				} else {
-					output[i][j] = '.';
+					sb.append('.');
 				}
 			}
 		}
 
-		return output;
+		return sb.toString();
 	}
 
-	void speakOutput(char[][] output) {
-		for (char[] line : output) {
-			for (char current : line) {
-				System.out.print(current);
-			}
-			System.out.println();
+	void speakOutput(String output, int[] boardSize) {
+		int rows = boardSize[0];
+		int cols = boardSize[1];
+		for (int i = 0; i < rows; i++) {
+			System.out.println(output.substring(i * cols, i * cols + cols));
 		}
-		System.out.println();
 	}
 }
 
 public class ExploringLife {
 
 	public static void main(String[] args) throws InterruptedException {
-		final String PATH = "exploreInput.txt";
-
-		Storage storage = new Storage(PATH);
+		Storage storage = new Storage();
 
 		System.out.println("Choose which game to play:");
 		System.out.println("Enter (0) for user input.");
 		System.out.println("Enter (1) for a random map.");
 		int gameMode;
-		int[] boardSize = new int[3];
+		int[] boardSize = new int[2];
+		int life = 0;
 		Scanner scanner = new Scanner(System.in);
 		try {
 			gameMode = scanner.nextInt();
@@ -149,9 +143,8 @@ public class ExploringLife {
 				boardSize[1] = scanner.nextInt();
 				System.out
 						.println("Enter an integer percentage for a tile to contain life:");
-				boardSize[2] = scanner.nextInt();
+				life = scanner.nextInt();
 			}
-
 		} catch (NumberFormatException e) {
 			System.out.println("Input must be a number!");
 			scanner.close();
@@ -159,36 +152,50 @@ public class ExploringLife {
 		}
 		scanner.close();
 
-		char[][] input;
+		String input;
 		if (gameMode == 0) {
+			storage.setPath("exploreInput.txt");
+
+			boardSize = storage.getBoardSize();
 			input = storage.input();
+
 			if (input == null) {
 				return;
 			}
 		} else {
-			input = storage.generatedInput(boardSize);
+			input = storage.generatedInput(boardSize, life);
 		}
+		String originalInput = new String(input);
 		Actions actions = new Actions();
-		System.out.println("Mutation number 1:");
-		char[][] output = actions.output(input);
-		actions.speakOutput(output);
 
-		Queue<char[][]> pastOutputs = new ArrayBlockingQueue<>(3);
+		int pastOutputsLimit = 5;
+
+		Queue<String> pastOutputs = new ArrayDeque<>(pastOutputsLimit);
 		pastOutputs.add(input);
-		System.out.println(pastOutputs.size());
-		
-		for (int i = 2; i < 1001; i++) {
+
+		for (int i = 1; i <= 10000; i++) {
 			Thread.sleep(325);
 			System.out.printf("Mutation number %d:%n", i);
-			output = actions.output(output);
-			actions.speakOutput(output);
-			
-			
+			input = actions.output(input, boardSize);
+			actions.speakOutput(input, boardSize);
+
+			if (pastOutputs.contains(input)) {
+				System.out.printf(
+						"Repeating board found within the last %d maps.",
+						pastOutputs.size());
+				break;
+			}
+
+			pastOutputs.add(input);
+
+			if (i > pastOutputsLimit - 1) {
+				pastOutputs.remove();
+			}
 			
 		}
-
+		if (gameMode == 1) {
+			System.out.println("\nRepeat of the original input:");
+			actions.speakOutput(originalInput, boardSize);
+		}
 	}
 }
-// to do:
-// check previous boards - previous 2 seems like a good number
-// use queue for that?
