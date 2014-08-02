@@ -66,7 +66,7 @@ class Storage {
 
 	char[][] generatedInput() {
 		char[][] result = new char[mRows][mCols];
-		for (int i = 0; i < mRows * mCols; i++) {
+		for (int i = 0; i < mRows; i++) {
 			for (int j = 0; j < mCols; j++) {
 				result[i][j] = (Math.random() * 100 > mLife) ? '.' : '#';
 			}
@@ -174,8 +174,8 @@ public class ExploringLifeChar {
 			}
 		} else if (gameMode == 2) {
 			storage.setRows(40);
-			storage.setRows(60);
-			storage.setRows(25);
+			storage.setCols(60);
+			storage.setLife(25);
 			input = storage.generatedInput();
 		} else {
 			input = storage.generatedInput();
